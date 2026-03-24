@@ -14,7 +14,7 @@ RUN echo "[supervisord]\n\
 nodaemon=true\n\
 \n\
 [program:hypercorn]\n\
-command=hypercorn main:app --bind 127.0.0.1:9002\n\
+command=hypercorn main:app --bind 127.0.0.1:19002\n\
 directory=/app\n\
 autostart=true\n\
 autorestart=true\n\

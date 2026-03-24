@@ -68,10 +68,10 @@ func main() {
 	http.HandleFunc("/", gatewayHandler)  //then baaki requests yha bhejdo
 
 	// FIX — Gateway should also use HTTPS
-    log.Fatal(http.ListenAndServeTLS(
+    log.Fatal(http.ListenAndServe(
         cfg.GatewayPort,
-        "/certs/gateway.crt",
-        "/certs/gateway.key",
+        // "/certs/gateway.crt",
+        // "/certs/gateway.key",
         nil,
     ))
     }
