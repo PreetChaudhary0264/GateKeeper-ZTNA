@@ -1,0 +1,233 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  /* background: #0f1117; */
+  background: wheat;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── NAVBAR ── */
+.navbar {
+  /* background: #1a1d27; */
+  background: white;
+  border-bottom: 1px solid #2d3148;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #7c85ff;
+  letter-spacing: 1px;
+}
+
+.navbar .live-badge {
+  background: #1a3a2a;
+  color: #4ade80;
+  border: 1px solid #4ade80;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ── LAYOUT ── */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* ── STATS ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  /* background: #1a1d27; */
+  background: white;
+  border: 1px solid #2d3148;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.stat-card .label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.stat-card .value {
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.stat-card.total   .value { color: #7c85ff; }
+.stat-card.allowed .value { color: #4ade80; }
+.stat-card.blocked .value { color: #f87171; }
+.stat-card.rate    .value { color: #fbbf24; }
+
+/* ── SERVICES ── */
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  /* color: #94a3b8; */
+  color: black;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.service-card {
+  /* background: #1a1d27; */
+  background: white;
+  border: 1px solid #2d3148;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.service-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.service-dot.online  { background: #4ade80; }
+.service-dot.offline { background: #f87171; }
+
+.service-card .name { font-size: 13px; font-weight: 500; color: #64748b; }
+.service-card .port { font-size: 11px; color: #64748b; }
+
+/* ── LOGS TABLE ── */
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.refresh-btn {
+  background: #3d4268;
+  color: #e2e8f0;
+  border: 1px solid #3d4268;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logs-table {
+  background: #1a1d27;
+  /* background: white; */
+  border: 1px solid #2d3148;
+  border-radius: 12px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.logs-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.logs-table th {
+  background: #13151f;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 11px;
+  color: #64748b;
+  /* color: white; */
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #2d3148;
+}
+
+.logs-table td {
+  padding: 12px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid #1e2235;
+}
+
+.logs-table tr:last-child td {
+  border-bottom: none;
+}
+
+.logs-table tr:hover td {
+  background: #1e2235;
+}
+
+/* Status badges */
+.badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge.allowed {
+  background: #1a3a2a;
+  color: #4ade80;
+  border: 1px solid #4ade80;
+}
+
+.badge.blocked {
+  background: #3a1a1a;
+  color: #f87171;
+  border: 1px solid #f87171;
+}
+
+.blocked-at {
+  background: #2d2416;
+  color: #fbbf24;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.empty {
+  text-align: center;
+  padding: 48px;
+  color: #64748b;
+  font-size: 14px;
+}

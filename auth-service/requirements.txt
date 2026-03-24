@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+python-jose[cryptography]
+python-dotenv
+pydantic
+redis

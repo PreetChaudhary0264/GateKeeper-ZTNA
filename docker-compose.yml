@@ -1,0 +1,148 @@
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: ztna-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ztna-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ztna -d ztnadb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ztna-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ztna-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  auth-service:
+      build: ./auth-service
+      container_name: ztna-auth
+      ports:
+           - "8001:8001"
+      env_file:
+           - .env
+      environment:
+        REDIS_HOST: ztna-redis
+        REDIS_PORT: 6379
+      networks:
+           - ztna-network
+      depends_on:
+       postgres:
+        condition: service_healthy
+       redis:
+        condition: service_healthy
+
+  hr-service:
+    build: ./hr-service
+    container_name: ztna-hr
+    ports:
+      - "9001:9001"
+    volumes:
+      - ./certs:/certs:ro
+    networks:
+      - ztna-network
+
+  finance-service:
+    build: ./finance-service
+    container_name: ztna-finance
+    ports:
+      - "9002:9002"
+    volumes:
+      - ./certs:/certs:ro
+    networks:
+      - ztna-network
+
+  admin-service:
+    build: ./admin-service
+    container_name: ztna-admin
+    ports:
+      - "9003:9003"
+    volumes:
+      - ./certs:/certs:ro
+    networks:
+      - ztna-network
+
+  audit-service:
+    build: ./audit-service
+    container_name: ztna-audit
+    ports:
+      - "9999:9999"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@ztna-postgres:5432/${POSTGRES_DB}
+    networks:
+      - ztna-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build: ./gateway
+    container_name: ztna-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      AUTH_SERVICE_URL:    http://ztna-auth:8001
+      AUDIT_SERVICE_URL:   http://ztna-audit:9999
+      HR_SERVICE_URL:      https://ztna-hr:9001
+      FINANCE_SERVICE_URL: https://ztna-finance:9002
+      ADMIN_SERVICE_URL:   https://ztna-admin:9003
+      REDIS_ADDR:          ztna-redis:6379
+    volumes:
+      - ./certs:/certs:ro
+    networks:
+      - ztna-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      audit-service:
+        condition: service_started
+      hr-service:
+        condition: service_started
+      finance-service:
+        condition: service_started
+      admin-service:
+        condition: service_started
+
+  dashboard:
+    build: ./dashboard
+    container_name: ztna-dashboard
+    ports:
+      - "5173:80"
+    networks:
+      - ztna-network
+    depends_on:
+      - audit-service
+      - gateway
+
+networks:
+  ztna-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
