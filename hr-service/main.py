@@ -17,7 +17,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def verify_gateway_cert(request: Request, call_next):
-    forwarded_by = request.headers.get("X-Forwarded-By")
+    forwarded_by = request.headers.get("X-Forwarded-By")   #it is extra layer only not security, main kaam to nginx kr rha hai
 
     if request.url.path == "/health":
         return await call_next(request)
@@ -60,5 +60,5 @@ def health():
 
 if __name__ == "__main__":
     config = Config()
-    config.bind = ["127.0.0.1:19001"]
+    config.bind = ["127.0.0.1:19001"]  #Sirf same machine/container access kar sakta hai. outside world se hr-service accessible nhi
     asyncio.run(serve(app, config))

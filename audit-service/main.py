@@ -7,19 +7,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="ZTNA Audit Service")
 
+
 # Dashboard ko allow karo
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 @app.on_event("startup")
-def startup():
+def startup():   #server start hote hi run hoga
     init_db()
 
-class LogRequest(BaseModel):
+class LogRequest(BaseModel):   #model
     email:      Optional[str] = "anonymous"
     role:       Optional[str] = "unknown"
     path:       str
@@ -28,7 +29,7 @@ class LogRequest(BaseModel):
     blocked_at: Optional[str] = None
     reason:     Optional[str] = None
 
-# ─── LOG LIKHNA ──────────────────────────────
+# ---------- LOG LIKHNA -----------------
 @app.post("/log")
 def write_log(req: LogRequest):
     """
@@ -36,7 +37,7 @@ def write_log(req: LogRequest):
     Ramesh allowed hua ya hacker blocked —
     dono cases mein PostgreSQL mein record jaata hai
     """
-    db = SessionLocal()
+    db = SessionLocal()  #connection open
     try:
         log = AccessLog(
             email      = req.email,
@@ -49,7 +50,7 @@ def write_log(req: LogRequest):
             timestamp  = datetime.utcnow()
         )
         db.add(log)
-        db.commit()
+        db.commit()  #BTS sql execute hua INSERT INTO access_logs(...)
 
         status = "ALLOWED" if req.allowed else " BLOCKED"
         print(f"{status} | {req.email} → {req.path} | {req.reason or 'Access granted'}")
@@ -63,7 +64,7 @@ def write_log(req: LogRequest):
     finally:
         db.close()
 
-# ─── LOGS PADHNA ─────────────────────────────
+# ------------- LOGS PADHNA -------------------
 @app.get("/logs")
 def get_logs(limit: int = 20):
     """
@@ -72,6 +73,10 @@ def get_logs(limit: int = 20):
     """
     db = SessionLocal()
     try:
+        #table select
+        #newest first
+        #limit = 20
+        #execute
         logs = db.query(AccessLog)\
                  .order_by(AccessLog.timestamp.desc())\
                  .limit(limit)\
@@ -94,7 +99,7 @@ def get_logs(limit: int = 20):
     finally:
         db.close()
 
-# ─── STATS ───────────────────────────────────
+# --------------------- STATS -------------------------
 @app.get("/stats")
 def get_stats():
     """
@@ -118,7 +123,7 @@ def get_stats():
     finally:
         db.close()
 
-# ─── RECENT BLOCKED ──────────────────────────
+# ------------------- RECENT BLOCKED ----------------------
 @app.get("/blocked")
 def get_blocked():
     """

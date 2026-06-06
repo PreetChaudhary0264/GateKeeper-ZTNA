@@ -21,20 +21,20 @@ try:
         socket_connect_timeout=5
     )
     redis_client.ping()
-    print("✓ Redis connected successfully")
+    print(" Redis connected successfully")
 except Exception as e:
-    print(f"❌ CRITICAL: Redis connection failed - {e}")
+    print(f" CRITICAL: Redis connection failed - {e}")
     print("Redis is mandatory for ZTNA security (token blacklisting, rate limiting)")
     sys.exit(1)  # Exit if Redis not available
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ─── REQUEST MODELS ──────────────────────────
+# ---------- REQUEST MODELS ----------------
 
 class LoginRequest(BaseModel):
     email: str
@@ -47,10 +47,10 @@ class VerifyRequest(BaseModel):
 class LogoutRequest(BaseModel):
     token: str
 
-# ─── ROUTES ──────────────────────────────────
+# ----------------- ROUTES -----------------------
 
 @app.post("/login")
-def login(req: LoginRequest):
+def login(req: LoginRequest):  #req me json parse ho gya
     """
     Login with rate limiting and session tracking
     """
@@ -80,7 +80,7 @@ def login(req: LoginRequest):
         )
 
     # CHECK 2 — Password sahi hai?
-    if user["password"] != req.password:
+    if user["password"] != req.password:   # production me definitely password hashed krenge
         print(f"Password galat: {req.email}")
         # Increment failed attempts
         redis_client.incr(failed_key)
@@ -113,7 +113,7 @@ def login(req: LoginRequest):
     redis_client.sadd(user_devices_key, req.device_id)
     redis_client.expire(user_devices_key, 86400)  # 24 hours
 
-    print(f"✓ Login successful: {req.email} | Session tracked in Redis")
+    print(f"Login successful: {req.email} | Session tracked in Redis")
     
     return {
         "token": token,
@@ -181,7 +181,7 @@ def logout(req: LogoutRequest):
             for key in redis_client.scan_iter(match=pattern):
                 redis_client.delete(key)
             
-            print(f"✓ Logout successful: {email} | Token blacklisted for {ttl}s")
+            print(f"Logout successful: {email} | Token blacklisted for {ttl}s")
             return {
                 "message": "Logged out successfully",
                 "email": email

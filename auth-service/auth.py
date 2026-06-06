@@ -1,14 +1,17 @@
 from jose import jwt, JWTError
 from datetime import datetime, timedelta  #curr time nikalna and time diff cal krna
 import os
+import sys
 
-# Ye same secret key honi chahiye
-# Jo gateway ki middleware.go mein hai
-SECRET_KEY = os.getenv("JWT_SECRET", "ztna-super-secret-key-2024")  #token sign kro and verify krte waqt signature check kro
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
+SECRET_KEY = os.getenv("JWT_SECRET")  #token sign kro and verify krte waqt signature check kro
+if not SECRET_KEY:
+    print(" JWT_SECRET missing")
+    sys.exit(1)
+
+ALGORITHM = os.getenv("ALGORITHM")   #HS256 => HMAC + SHA256
 TOKEN_EXPIRE_MINUTES = 15  # sirf 15 min!
 
-print("ALGO",ALGORITHM)
+# print("ALGO",ALGORITHM)
 
 def create_token(email: str, role: str, name: str) -> str:
     """
@@ -30,7 +33,7 @@ def create_token(email: str, role: str, name: str) -> str:
         "iat": datetime.utcnow()  # kab banaya
     }
 
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)  #list isliye di hai jisse hacker none na bhej paye , bina list ke hacker none bhej skta tha jisse no signature verification
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)  
     print(f"Token created for {email} | Role: {role} | Expires: {expire}")
     return token
 
@@ -48,7 +51,7 @@ def verify_token(token: str) -> dict:
         payload = jwt.decode(
             token,
             SECRET_KEY,
-            algorithms=[ALGORITHM]
+            algorithms=[ALGORITHM]  #list isliye di hai jisse hacker none na bhej paye , bina list ke hacker none bhej skta tha jisse no signature verification
         )
 
         email = payload.get("sub")
@@ -71,7 +74,7 @@ def verify_token(token: str) -> dict:
         raise
 
 
-def decode_token_without_verify(token: str) -> dict:
+def decode_token_without_verify(token: str) -> dict:   #ye function sirf metadata nikalne ke liye use ho rha hai
     """
     Token decode karo WITHOUT signature verification
     Used for logout to get expiry time
@@ -81,7 +84,7 @@ def decode_token_without_verify(token: str) -> dict:
             token,
             SECRET_KEY,
             algorithms=[ALGORITHM],
-            options={"verify_signature": False, "verify_exp": False}
+            options={"verify_signature": False, "verify_exp": False}  #signature mat check kro, expiry mat check kro
         )
         return payload
     except Exception as e:

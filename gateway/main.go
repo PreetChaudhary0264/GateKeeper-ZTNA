@@ -18,7 +18,7 @@ func sendAuditLog(
 	blockedAt string,
 	reason string,
 ) {
-	cfg := LoadConfig()
+	cfg := LoadConfig()                       //config.go file me function ko call kra hai
 	auditURL := cfg.AuditServiceURL + "/log"     // = "http://ztna-audit:9999/log"
 
 	payload := map[string]interface{}{
@@ -32,28 +32,28 @@ func sendAuditLog(
 	}
 
 	body, _ := json.Marshal(payload) //simple marshal hai fail nhi hoga but production me error check krna shi rhega
+	//go object ko json me convert krne ka liye marshal use kiya hai, kyuki payload ek Map hai
 
 	go func() {
 		resp, err := http.Post(
 			auditURL,
 			"application/json",
-			bytes.NewBuffer(body),
+			bytes.NewBuffer(body),  //http.post ko byte array nhi chaiye kyuki HTTP package stream read karta hai. isko chaiye io.Reader
 		)
 		if err != nil {
 			fmt.Println("Audit log nahi gaya:", err)
 			return
 		}
-		defer resp.Body.Close()  //stream hai to close bhi krna pdega
+		defer resp.Body.Close()  //http response ke ander connection attached hota hai isliye close krna pdega wrna connection leak, memory leak ho skta hai
 	}()
 }
 
 func main() {
 	cfg := LoadConfig()
 	
-	// Initialize Redis - MANDATORY
-	initRedis(cfg.RedisAddr)
+	initRedis(cfg.RedisAddr)  //redis connect kro 
 	
-	initMTLS()  //gateway certificates load kro
+	initMTLS()  //gateway certificates load kro, kyuki hr request pe certificate file nhi padhni expensive ho jayga
 
 	fmt.Println("ZTNA Gateway Starting")
 	fmt.Printf("Port     : %s\n", cfg.GatewayPort)
@@ -61,40 +61,44 @@ func main() {
 	fmt.Printf("Audit    : %s\n", cfg.AuditServiceURL)
 	fmt.Printf("Redis    : %s\n", cfg.RedisAddr)
 	fmt.Printf("mTLS     : enabled\n")
-	fmt.Println("──────────────────────────────────")
+	fmt.Println("-----------------------------")
     
 	//route registration
 	http.HandleFunc("/health", healthHandler)  //pehle health check krlo
-	http.HandleFunc("/", gatewayHandler)  //then baaki requests yha bhejdo
+	http.HandleFunc("/", gatewayHandler)  //then baaki requests yha bhejdo, jaise /admin, /hr, /finance
 
-	// FIX — Gateway should also use HTTPS
-    log.Fatal(http.ListenAndServe(
-        cfg.GatewayPort,
+
+    log.Fatal(http.ListenAndServe(      // TODO — Gateway should also use HTTPS
+        cfg.GatewayPort,                //Step1 port open hoga => 8000
+	                                    //step2 TCP socket create
+	                                    //step3 Infinite loop => Request wairt
+	                                    //step4 request aayi, Matching route find, handler call
         // "/certs/gateway.crt",
         // "/certs/gateway.key",
         nil,
     ))
     }
-
+                   //response bhejne ke liye, incoming request  (same as req,res in express.js)
 func gatewayHandler(w http.ResponseWriter, r *http.Request) {
     enableCORS(w) 
-	if r.Method == http.MethodOptions {
+
+	if r.Method == http.MethodOptions {  //browser pehle puchega ki can i send request?,  server => yes
         w.WriteHeader(http.StatusOK)
         return
-    }
+    }  //hta skte ho bs lga diya aise hi
 
 	cfg := LoadConfig()
 	start    := time.Now()
 	deviceID := r.Header.Get("X-Device-ID")
-	basePath := getBasePath(r.URL.Path)
+	basePath := getBasePath(r.URL.Path)  //request ka path ex=>     /finance/payroll
 
-	fmt.Printf("\n📥 [%s] %s %s\n",
+	fmt.Printf("\n [%s] %s %s\n",
 		time.Now().Format("15:04:05"),
 		r.Method,
 		r.URL.Path,
 	)
 
-	// ─── CHECK 1: AUTH ────────────────────────
+	// ------------- CHECK 1: AUTH ---------------------
 	claims, err := checkAuth(r, cfg.AuthServiceURL)
 	if err != nil {
 		fmt.Printf("Auth FAILED   : %s\n", err.Error())
@@ -107,7 +111,8 @@ func gatewayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("Auth PASSED   : %s (%s)\n", claims.Email, claims.Role)
 
-	// ─── CHECK 2: DEVICE ──────────────────────
+
+	// -------------- CHECK 2: DEVICE ------------------
 	deviceOk, deviceMsg := checkDevice(r)
 	if !deviceOk {
 		fmt.Printf("Device FAILED : %s\n", deviceMsg)
@@ -120,7 +125,8 @@ func gatewayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("Device PASSED : %s\n", deviceMsg)
 
-	// ─── CHECK 3: POLICY ──────────────────────
+
+	// -------------- CHECK 3: POLICY -----------------
 	allowed, policyMsg := checkPolicy(claims.Role, basePath)
 	if !allowed {
 		fmt.Printf("Policy FAILED : %s\n", policyMsg)
@@ -133,14 +139,14 @@ func gatewayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("Policy PASSED : %s\n", policyMsg)
 
-	// ─── TEENO PASS — LOG + FORWARD ───────────
+	// -------- TEENO CHECK PASS — LOG + FORWARD -----------
 	sendAuditLog(
 		claims.Email, claims.Role, basePath,
 		deviceID, true, "", "Access granted",
 	)
 	fmt.Printf("FORWARDING   : %s → %s\n", r.URL.Path, claims.Email)
 	forwardRequest(w, r, claims)
-	fmt.Printf("⏱Time         : %v\n", time.Since(start))
+	fmt.Printf("Time         : %v\n", time.Since(start))
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {

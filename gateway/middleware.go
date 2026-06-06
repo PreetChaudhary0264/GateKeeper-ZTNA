@@ -16,22 +16,23 @@ import (
 var ctx = context.Background()   //redis ka her operation context mangta hai
 
 // Redis se baat krne wala global client jab user logout kre to uska token redis me daal do agar dobara login kre to blocked, normally user logout krne ke baad token 15mins tak valid rhega isliye for security
+//redis pointer
 var redisClient *redis.Client
 
 func initRedis(addr string) {
 	if addr == "" {
-		fmt.Println("❌ CRITICAL: Redis address not configured")
+		fmt.Println("CRITICAL: Redis address not configured")
 		fmt.Println("Redis is mandatory for ZTNA security (token blacklisting)")
-		os.Exit(1)
+		os.Exit(1)   //redis connect nhi hua to process ko terminate krdo, gateway close
 	}
 	
-	redisClient = redis.NewClient(&redis.Options{
+	redisClient = redis.NewClient(&redis.Options{ //new Redis connection bnaya
 		Addr: addr,
 	})
 
-	_, err := redisClient.Ping(ctx).Result()
+	_, err := redisClient.Ping(ctx).Result()   //ping krke check kro connection workig hai ya nhi
 	if err != nil {
-		fmt.Printf("❌ CRITICAL: Redis connection failed - %v\n", err)
+		fmt.Printf(" CRITICAL: Redis connection failed - %v\n", err)
 		fmt.Println("Redis is mandatory for ZTNA security (token blacklisting)")
 		os.Exit(1)
 	}
@@ -42,6 +43,7 @@ func initRedis(addr string) {
 // Auth Service se jo response aayega
 //json me fields hongi valid:true, email:xyz@mai.com to mapping kri hai
 type AuthResponse struct {
+	             //Ye struct tags hai , taki json decoder ko pta chle ki "valid" wali key ko is valid field me daalna hai
 	Valid  bool   `json:"valid"`
 	Email  string `json:"email"`
 	Role   string `json:"role"`
@@ -49,16 +51,15 @@ type AuthResponse struct {
 }
 
 // Gateway ke andar user ki info carry karne ke liye
-//auth service ka response use nhi kr rhe because usme valid fileds bhi hai and aage chlke kya pta orr fields aaye isliye sirf requierd info do jo gateway use krega
+//auth service ka response use nhi kr rhe because usme valid filed bhi hai and aage chlke kya pta orr fields aaye isliye sirf requierd info do jo gateway use krega
 type Claims struct {
 	Email string
 	Role  string
 	Name  string
 }
 
-// ─── AUTH CHECK ──────────────────────────────
-// Gateway khud verify nahi karta
-// Auth Service ko call karta hai
+// ------------------ AUTH CHECK -----------------
+//Gateway Auth Service ko call krega
 func checkAuth(r *http.Request, authServiceURL string) (*Claims, error) {
 
 	// Header se token nikalo
@@ -67,19 +68,20 @@ func checkAuth(r *http.Request, authServiceURL string) (*Claims, error) {
 		return nil, fmt.Errorf("Authorization header nahi hai")
 	}
 
-	parts := strings.Split(authHeader, " ")
+	parts := strings.Split(authHeader, " ")   //parts = []String{"Bearer","abc123"}
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		return nil, fmt.Errorf("Format galat hai — 'Bearer TOKEN' chahiye")
 	}
 
 	tokenStr := parts[1]
+	//since hum auth-service me token blacklistling check kr rhe hai to yha krna necessary nhi hai.
 
 	// Redis blacklist check
 	// Token blacklisted hai to block karo
-	blocked, err := redisClient.Get(ctx, "blacklist:"+tokenStr).Result()
-	if err == nil && blocked != "" {
-		return nil, fmt.Errorf("Token blacklisted - user logged out")
-	}
+	// blocked, err := redisClient.Get(ctx, "blacklist:"+tokenStr).Result()
+	// if err == nil && blocked != "" {
+	// 	return nil, fmt.Errorf("Token blacklisted - user logged out")
+	// }
 
 	//auth service ko json me bhejenge
 	requestBody, _ := json.Marshal(map[string]string{
@@ -186,15 +188,14 @@ func checkPolicy(role string, path string) (bool, string) {
 
 // ─── HELPERS ─────────────────────────────────
 func sendError(w http.ResponseWriter, statusCode int, message string, step string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
+	w.Header().Set("Content-Type", "application/json")  //response header set
+	w.WriteHeader(statusCode)                           //status set kro => 401,403,500, etc
 	json.NewEncoder(w).Encode(map[string]string{
 		"error":      message,
 		"blocked_at": step,
 		"timestamp":  time.Now().Format(time.RFC3339),
 	})
 }
-//agar koi check fail hua to user ko json error bhejdo
 
 func sendJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -204,7 +205,7 @@ func sendJSON(w http.ResponseWriter, data interface{}) {
 }
 
 func enableCORS(w http.ResponseWriter) {
-    w.Header().Set("Access-Control-Allow-Origin", "*")
-    w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Device-ID, X-Device-OS")
+    w.Header().Set("Access-Control-Allow-Origin", "*")  //koi bhi origin request bhej skta hai
+    w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")   //sirf yhi methoda allowed hai
+    w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Device-ID, X-Device-OS")   //sirf yhi headers allowed hai
 }

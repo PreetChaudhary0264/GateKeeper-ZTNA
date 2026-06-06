@@ -9,10 +9,10 @@ import os
 # format: postgresql://user:password@host:port/dbname
 # Docker mein environment variable se aayega
 # Local mein default use hoga
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://ztna:ztna123@localhost:5432/ztnadb"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL missing")
 
 engine = create_engine(DATABASE_URL)
 Base = declarative_base()
@@ -37,5 +37,5 @@ def init_db():
         print("PostgreSQL connected!")
         print("access_logs table ready!")
     except Exception as e:
-        print(f"❌ Database error: {e}")
+        print(f" Database error: {e}")
         raise

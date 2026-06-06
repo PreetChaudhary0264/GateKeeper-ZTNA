@@ -2,10 +2,10 @@
 # Real project mein PostgreSQL se aayega
 
 USERS = {
-    "ramesh@company.com": {
+    "ims@company.com": {
         "password": "pass123",
         "role": "hr",
-        "name": "Ramesh",
+        "name": "ims",
         "device_id": "DEVICE-HR-001"    # registered device
     },
     "priya@company.com": {
